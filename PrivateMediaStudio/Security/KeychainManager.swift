@@ -14,7 +14,10 @@ enum KeychainError: Error {
 /// itself never touches SwiftData/disk in plaintext.
 enum KeychainManager {
 
-    private static let service = "com.privatemediastudio.servercredentials"
+    /// Derived from the bundle ID rather than hardcoded, so the real
+    /// identifier lives only in build configuration and never in source.
+    private static let service =
+        (Bundle.main.bundleIdentifier ?? "app") + ".servercredentials"
 
     /// Stores (or overwrites) the password for the given account key.
     static func setPassword(_ password: String, forAccount account: String) throws {

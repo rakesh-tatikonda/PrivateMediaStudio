@@ -45,6 +45,12 @@ jobs:
           path: Pods
           key: pods-${{ hashFiles('Podfile') }}
 
+      - name: Cache FFmpegKit
+        uses: actions/cache@v4
+        with:
+          path: Vendor/ffmpeg-kit
+          key: ffmpegkit-${{ hashFiles('Vendor/ffmpeg-kit/*.podspec') }}
+
       - name: Cache whisper model
         uses: actions/cache@v4
         id: model-cache
@@ -63,6 +69,14 @@ jobs:
 
       - name: Generate Xcode project
         run: xcodegen generate
+
+      # Populates Vendor/ffmpeg-kit from our own release asset. Upstream
+      # ffmpeg-kit binaries were removed from CocoaPods in April 2025, so
+      # `pod install` cannot resolve them any more — see FFMPEG.md.
+      - name: Fetch FFmpegKit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/fetch-ffmpegkit.sh
 
       - name: Install CocoaPods deps
         run: pod install --repo-update
@@ -194,6 +208,14 @@ jobs:
         run: |
           /usr/libexec/PlistBuddy -c "Add :provisioningProfiles dict" ExportOptions.plist || true
           /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:${APP_BUNDLE_ID} string ${PROVISIONING_PROFILE_NAME}" ExportOptions.plist
+
+      # Populates Vendor/ffmpeg-kit from our own release asset. Upstream
+      # ffmpeg-kit binaries were removed from CocoaPods in April 2025, so
+      # `pod install` cannot resolve them any more — see FFMPEG.md.
+      - name: Fetch FFmpegKit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/fetch-ffmpegkit.sh
 
       - name: Install toolchain and dependencies
         run: |

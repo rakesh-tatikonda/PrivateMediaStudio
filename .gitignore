@@ -31,3 +31,10 @@ apikey.b64
 
 # macOS
 .DS_Store
+
+# Self-built FFmpegKit — fetched by scripts/fetch-ffmpegkit.sh from the
+# release asset that build-ffmpegkit.yml publishes. The podspec beside them
+# IS committed; the binaries are not.
+Vendor/ffmpeg-kit/*.xcframework/
+Vendor/ffmpeg-kit/*.zip
+Vendor/ffmpeg-kit/LICENSE-*.txt

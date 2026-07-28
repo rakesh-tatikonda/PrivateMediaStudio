@@ -50,8 +50,10 @@ base64 -i ios_distribution.p12 | tr -d '\n' > ios_distribution.p12.b64
 ## 2. Register an App ID
 
 At [developer.apple.com → Identifiers → +](https://developer.apple.com/account/resources/identifiers/list),
-register `com.privatemediastudio.app` (matching `PRODUCT_BUNDLE_IDENTIFIER`
-in `project.yml`) as an explicit App ID.
+register your chosen bundle ID as an **explicit** App ID. Leave every
+capability checkbox unticked — this app needs none of them (see the note at
+the end). Store the value as the `APP_BUNDLE_ID` secret; it is never
+committed, `scripts/configure.sh` substitutes it at build time.
 
 ## 3. Create a provisioning profile
 
@@ -97,20 +99,27 @@ For TestFlight, add all of:
 | `APPSTORE_CONNECT_API_KEY_BASE64` | contents of `apikey.b64` |
 | `APPSTORE_CONNECT_API_KEY_ID` | Key ID from step 4 |
 | `APPSTORE_CONNECT_API_ISSUER_ID` | Issuer ID from step 4 |
+| `APP_BUNDLE_ID` | your bundle ID, e.g. `com.yourname.app` |
+| `APPLE_TEAM_ID` | your 10-character Team ID |
 
-(Ad-hoc path: just the first three.)
+(Ad-hoc path: skip the three `APPSTORE_CONNECT_*` rows.)
 
 ## 6. Fill in your Team ID and go
 
-Replace `REPLACE_WITH_YOUR_TEAM_ID` in `ExportOptions.plist` (TestFlight) or
-`ExportOptionsAdHoc.plist` (ad-hoc) with your 10-character Team ID, shown at
-the top of any page in the Apple Developer portal's Membership section.
+Nothing to edit — the Team ID comes from the `APPLE_TEAM_ID` secret and is
+substituted into `ExportOptions.plist` by `scripts/configure.sh` during the
+build. Find it at the top of any page in the Apple Developer portal's
+Membership section.
 
-Then in `.github/workflows/ios-ci.yml`, uncomment the `archive-testflight`
-job (or `archive-adhoc`) — every line is already written, this is purely
-deleting `#` prefixes — and push. The build lands in TestFlight automatically
-within a few minutes of the job finishing, or as a downloadable `.ipa`
-artifact for the ad-hoc path.
+To ship a build, go to Actions -> iOS CI -> Run workflow, tick **Archive and
+upload to TestFlight**, and run it. The `archive-testflight` job is skipped on
+ordinary pushes so routine commits do not consume build numbers. The build
+lands in TestFlight a few minutes after the job finishes.
+
+Note that neither identifier is truly secret in the shipped app: the Team ID
+is inside `embedded.mobileprovision` in every `.ipa`, and the bundle ID
+appears in the App Store URL. Keeping them out of the repo only prevents this
+source tree from being linked to your Apple developer identity.
 
 ## Getting a device UDID without Xcode (ad-hoc path only)
 

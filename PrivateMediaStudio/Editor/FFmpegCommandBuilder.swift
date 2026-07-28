@@ -89,12 +89,37 @@ enum FFmpegCommandBuilder {
         }
 
         // MARK: Codec — HEVC per the spec's compression requirement.
-        args += ["-c:v", "libx265", "-preset", "medium", "-crf", "23"]
+        //
+        // hevc_videotoolbox rather than libx265: VideoToolbox is Apple's
+        // hardware encoder, so it is dramatically faster on device and, just
+        // as importantly, it is a built-in FFmpeg encoder rather than an
+        // external GPL library. Keeping x265 out is what lets this app link
+        // an LGPL-only FFmpeg build (see FFMPEG.md).
+        //
+        // VideoToolbox encoders are rate-controlled, not CRF-based — there is
+        // no -crf or -preset equivalent — so the quality knob is a target
+        // bitrate scaled to the output resolution.
+        args += ["-c:v", "hevc_videotoolbox"]
+        args += ["-b:v", "\(targetBitrateKbps(width: width, height: height))k"]
+        args += ["-tag:v", "hvc1"] // required for QuickTime/AVPlayer to recognise HEVC
         args += ["-c:a", "aac", "-b:a", "192k"]
         args += ["-movflags", "+faststart"]
 
         args += [outputURL.path]
         return args
+    }
+
+    // MARK: - Bitrate targeting
+
+    /// Rough bits-per-pixel target for HEVC hardware encoding. VideoToolbox
+    /// has no constant-quality mode on iOS, so quality is expressed as a
+    /// resolution-scaled bitrate: ~0.07 bits per pixel per frame at 30fps,
+    /// which sits close to libx265 -crf 23 in practice, with a floor so that
+    /// very small outputs do not end up starved.
+    private static func targetBitrateKbps(width: Int, height: Int) -> Int {
+        let pixels = Double(width * height)
+        let kbps = pixels * 30.0 * 0.07 / 1000.0
+        return max(1200, Int(kbps.rounded()))
     }
 
     // MARK: - Color grading → real FFmpeg filters
