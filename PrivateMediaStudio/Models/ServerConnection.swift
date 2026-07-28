@@ -25,14 +25,19 @@ final class ServerConnection {
     var dateAdded: Date
 
     init(displayName: String, host: String, port: Int, protocolType: ServerProtocolType, sharePath: String? = nil, savedUsername: String) {
-        self.id = UUID()
+        // @Model rewrites stored properties into computed accessors backed by
+        // SwiftData storage, so `self.id` cannot be read until every property
+        // is initialised — even though it was assigned first. Hold the value
+        // locally and use that instead.
+        let newID = UUID()
+        self.id = newID
         self.displayName = displayName
         self.host = host
         self.port = port
         self.protocolType = protocolType
         self.sharePath = sharePath
         self.savedUsername = savedUsername
-        self.keychainAccountKey = "server-\(self.id.uuidString)"
+        self.keychainAccountKey = "server-\(newID.uuidString)"
         self.dateAdded = .now
     }
 
