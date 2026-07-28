@@ -69,6 +69,15 @@
 	<false/>
 	<key>UIRequiresFullScreen</key>
 	<false/>
+	<!-- iPad needs its own key, and Apple requires all four orientations
+	     there for multitasking since TARGETED_DEVICE_FAMILY includes iPad. -->
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
