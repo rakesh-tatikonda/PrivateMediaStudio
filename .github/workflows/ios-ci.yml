@@ -37,7 +37,7 @@ jobs:
         env:
           APP_BUNDLE_ID: ${{ secrets.APP_BUNDLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: ./scripts/configure.sh
+        run: bash scripts/configure.sh
 
       - name: Cache CocoaPods
         uses: actions/cache@v4
@@ -183,7 +183,7 @@ jobs:
         env:
           APP_BUNDLE_ID: ${{ secrets.APP_BUNDLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: ./scripts/configure.sh
+        run: bash scripts/configure.sh
 
       # exportOptions needs a bundle-id -> profile-name mapping under manual
       # signing. Both halves are dynamic, so build the dict here instead of
