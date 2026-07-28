@@ -78,7 +78,8 @@ final class PlayerViewModel: NSObject, ObservableObject {
             self.mediaPlayer = player.mediaPlayer
 
             if let startIndex = playlist.orderedItems.firstIndex(where: { $0.id == mediaItem.id }) {
-                player.play(itemAtIndex: Int32(startIndex))
+                // VLCKit 3.x exposes -playItemAtNumber:, not -playItemAtIndex:.
+                player.playItem(at: NSNumber(value: startIndex))
             } else {
                 player.play()
             }
@@ -142,8 +143,11 @@ final class PlayerViewModel: NSObject, ObservableObject {
         }
     }
 
-    func playNext() { listPlayer?.next() }
-    func playPrevious() { listPlayer?.previous() }
+    // `next` and `previous` import from Obj-C as Bool-returning properties,
+    // not methods — reading them performs the skip. The discards are load
+    // bearing; dropping them is a compile error, not a style choice.
+    func playNext() { _ = listPlayer?.next }
+    func playPrevious() { _ = listPlayer?.previous }
     var isInPlaylist: Bool { listPlayer != nil }
 
     // MARK: - Subtitles
