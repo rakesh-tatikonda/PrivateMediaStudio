@@ -92,6 +92,30 @@ jobs:
             -destination "platform=iOS Simulator,name=$SIMULATOR_DEVICE" \
             | xcbeautify
 
+      # This project was scaffolded against APIs that do not all exist, so
+      # build failures are usually signature mismatches rather than logic
+      # errors. Rather than guess and burn a CI round trip per guess, dump the
+      # real third-party headers whenever the build fails — one artifact gives
+      # the ground truth for every remaining mismatch at once.
+      - name: Dump third-party API headers
+        if: failure()
+        run: |
+          mkdir -p artifacts/headers
+          for name in FFmpegKit.h FFmpegSession.h AbstractSession.h ReturnCode.h Statistics.h \
+                      VLCMediaListPlayer.h VLCMediaPlayer.h VLCMediaList.h VLCMedia.h; do
+            find Pods Vendor -name "$name" -exec cp {} artifacts/headers/ \; 2>/dev/null || true
+          done
+          find ~/Library/Developer/Xcode/DerivedData -path "*SwiftWhisper*" -name "*.swiftinterface" \
+            -exec cp {} artifacts/headers/ \; 2>/dev/null || true
+          ls -1 artifacts/headers/ || echo "(no headers found)"
+
+      - name: Upload API headers
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-headers
+          path: artifacts/headers/
+
       - name: Boot simulator and install app
         env:
           APP_BUNDLE_ID: ${{ secrets.APP_BUNDLE_ID || 'com.example.privatemediastudio' }}
