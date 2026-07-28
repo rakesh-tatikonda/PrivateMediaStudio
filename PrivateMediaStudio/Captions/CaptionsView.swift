@@ -119,7 +119,7 @@ struct CaptionsView: View {
                 Text("Language")
                 Spacer()
                 Picker("Language", selection: $viewModel.selectedLanguage) {
-                    ForEach(WhisperLanguage.allCases) { lang in
+                    ForEach(CaptionLanguage.allCases) { lang in
                         Text(lang.displayName).tag(lang)
                     }
                 }

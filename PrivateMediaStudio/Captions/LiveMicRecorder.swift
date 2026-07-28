@@ -41,7 +41,7 @@ final class LiveMicRecorder: ObservableObject {
         // keeps AVAudioEngine's tap running, so no further action needed here.
     }
 
-    func start(translateToEnglish: Bool, language: WhisperLanguage) throws {
+    func start(translateToEnglish: Bool, language: CaptionLanguage) throws {
         guard !isRecording else { return }
 
         let session = AVAudioSession.sharedInstance()
@@ -90,7 +90,7 @@ final class LiveMicRecorder: ObservableObject {
         }
     }
 
-    private func flushChunkIfReady(translateToEnglish: Bool, language: WhisperLanguage) {
+    private func flushChunkIfReady(translateToEnglish: Bool, language: CaptionLanguage) {
         let samplesPerChunk = Int(chunkDuration * sampleRate)
         guard rollingBuffer.count >= samplesPerChunk else { return }
 
@@ -99,7 +99,7 @@ final class LiveMicRecorder: ObservableObject {
         transcribeChunk(chunk, translateToEnglish: translateToEnglish, language: language)
     }
 
-    private func transcribeChunk(_ samples: [Float], translateToEnglish: Bool, language: WhisperLanguage) {
+    private func transcribeChunk(_ samples: [Float], translateToEnglish: Bool, language: CaptionLanguage) {
         let baseOffset = elapsedBeforeCurrentChunk
         elapsedBeforeCurrentChunk += Double(samples.count) / sampleRate
 

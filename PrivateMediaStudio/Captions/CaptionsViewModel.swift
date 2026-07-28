@@ -26,7 +26,7 @@ final class CaptionsViewModel: ObservableObject {
 
     @Published var inputMode: CaptionsInputMode = .file
     @Published var translateToEnglish = false
-    @Published var selectedLanguage: WhisperLanguage = .auto
+    @Published var selectedLanguage: CaptionLanguage = .auto
     @Published var mediaURLText = ""
 
     @Published private(set) var isProcessing = false
