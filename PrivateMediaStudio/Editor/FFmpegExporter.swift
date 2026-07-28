@@ -46,8 +46,10 @@ final class FFmpegExporter: ObservableObject {
 
         statusMessage = "Encoding\u{2026}"
         let ffmpegResult: Result<Void, Error> = await withCheckedContinuation { continuation in
-            let session = FFmpegKit.executeAsync(
-                withArguments: args,
+            // executeAsync takes a single command String. The array-based
+            // variant is a separate selector, -executeWithArgumentsAsync:.
+            let session = FFmpegKit.executeWithArgumentsAsync(
+                args,
                 withCompleteCallback: { [weak self] session in
                     Task { @MainActor in
                         if let assURL { try? FileManager.default.removeItem(at: assURL) }
