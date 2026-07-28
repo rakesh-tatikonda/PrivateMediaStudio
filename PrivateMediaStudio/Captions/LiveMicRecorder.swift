@@ -45,7 +45,11 @@ final class LiveMicRecorder: ObservableObject {
         guard !isRecording else { return }
 
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playAndRecord, mode: .measurement, options: [.duckOthers, .allowBluetooth])
+        // .allowBluetooth was renamed .allowBluetoothHFP; same raw value, and
+        // the rename kept the original availability, so no #available needed.
+        try session.setCategory(.playAndRecord,
+                                mode: .measurement,
+                                options: [.duckOthers, .allowBluetoothHFP])
         try session.setActive(true)
 
         let input = engine.inputNode
@@ -134,6 +138,16 @@ final class LiveMicRecorder: ObservableObject {
 
         var suppliedInput = false
         var conversionError: NSError?
+
+        // AVAudioConverterInputBlock is @Sendable, and AVAudioPCMBuffer is not
+        // Sendable, hence the warning. It is safe here specifically because
+        // the converter invokes the block synchronously, on this thread,
+        // before convert(to:error:) returns — the buffer never outlives the
+        // call or crosses a concurrency boundary. Narrowing the escape hatch
+        // to this one binding is better than @preconcurrency on the whole
+        // import, which would also hide genuine races elsewhere in the file.
+        nonisolated(unsafe) let inputBuffer = buffer
+
         let status = converter.convert(to: outputBuffer, error: &conversionError) { _, outStatus in
             if suppliedInput {
                 outStatus.pointee = .noDataNow
@@ -141,7 +155,7 @@ final class LiveMicRecorder: ObservableObject {
             }
             suppliedInput = true
             outStatus.pointee = .haveData
-            return buffer
+            return inputBuffer
         }
         guard status != .error, let channelData = outputBuffer.floatChannelData else { return nil }
         return Array(UnsafeBufferPointer(start: channelData[0], count: Int(outputBuffer.frameLength)))

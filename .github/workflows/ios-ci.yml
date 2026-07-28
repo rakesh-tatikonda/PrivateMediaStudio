@@ -64,7 +64,28 @@ jobs:
         if: steps.model-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p PrivateMediaStudio/Resources/Models
-          curl -L "$WHISPER_MODEL_URL" -o "PrivateMediaStudio/Resources/Models/$WHISPER_MODEL"
+          # --fail so an HTTP error page is not silently written to the .bin,
+          # --retry for flaky Hugging Face responses on a ~148MB download.
+          curl -L --fail --retry 3 "$WHISPER_MODEL_URL" \
+            -o "PrivateMediaStudio/Resources/Models/$WHISPER_MODEL"
+
+      # Runs on cache hits too. A truncated download gets saved to the cache at
+      # job end and then restored in 0s by every later run, so the model must
+      # be checked after restore, not just after download. Whisper would
+      # otherwise fail at runtime rather than at build time.
+      - name: Verify whisper model
+        run: |
+          MODEL="PrivateMediaStudio/Resources/Models/$WHISPER_MODEL"
+          if [ ! -f "$MODEL" ]; then
+            echo "::error::$WHISPER_MODEL is missing." >&2
+            exit 1
+          fi
+          SIZE=$(stat -f%z "$MODEL" 2>/dev/null || stat -c%s "$MODEL")
+          echo "$WHISPER_MODEL is $SIZE bytes."
+          if [ "$SIZE" -lt 50000000 ]; then
+            echo "::error::Model looks truncated. Clear the Actions cache and re-run." >&2
+            exit 1
+          fi
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -266,7 +287,28 @@ jobs:
         if: steps.model-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p PrivateMediaStudio/Resources/Models
-          curl -L "$WHISPER_MODEL_URL" -o "PrivateMediaStudio/Resources/Models/$WHISPER_MODEL"
+          # --fail so an HTTP error page is not silently written to the .bin,
+          # --retry for flaky Hugging Face responses on a ~148MB download.
+          curl -L --fail --retry 3 "$WHISPER_MODEL_URL" \
+            -o "PrivateMediaStudio/Resources/Models/$WHISPER_MODEL"
+
+      # Runs on cache hits too. A truncated download gets saved to the cache at
+      # job end and then restored in 0s by every later run, so the model must
+      # be checked after restore, not just after download. Whisper would
+      # otherwise fail at runtime rather than at build time.
+      - name: Verify whisper model
+        run: |
+          MODEL="PrivateMediaStudio/Resources/Models/$WHISPER_MODEL"
+          if [ ! -f "$MODEL" ]; then
+            echo "::error::$WHISPER_MODEL is missing." >&2
+            exit 1
+          fi
+          SIZE=$(stat -f%z "$MODEL" 2>/dev/null || stat -c%s "$MODEL")
+          echo "$WHISPER_MODEL is $SIZE bytes."
+          if [ "$SIZE" -lt 50000000 ]; then
+            echo "::error::Model looks truncated. Clear the Actions cache and re-run." >&2
+            exit 1
+          fi
 
       # CURRENT_PROJECT_VERSION is pinned to "1" in project.yml; App Store
       # Connect rejects a build whose (version, build) pair it has already
