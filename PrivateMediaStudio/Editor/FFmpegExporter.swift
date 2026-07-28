@@ -46,10 +46,12 @@ final class FFmpegExporter: ObservableObject {
 
         statusMessage = "Encoding\u{2026}"
         let ffmpegResult: Result<Void, Error> = await withCheckedContinuation { continuation in
-            // executeAsync takes a single command String. The array-based
-            // variant is a separate selector, -executeWithArgumentsAsync:.
-            let session = FFmpegKit.executeWithArgumentsAsync(
-                args,
+            // executeAsync takes a single command String; the array-based
+            // variant is a separate selector. Swift's Obj-C importer surfaces
+            // it as execute(withArgumentsAsync:) rather than the literal
+            // -executeWithArgumentsAsync: spelling.
+            let session = FFmpegKit.execute(
+                withArgumentsAsync: args,
                 withCompleteCallback: { [weak self] session in
                     Task { @MainActor in
                         if let assURL { try? FileManager.default.removeItem(at: assURL) }
