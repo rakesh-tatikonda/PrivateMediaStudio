@@ -16,6 +16,8 @@ name: Build FFmpegKit (one-off)
 # not wired into the normal CI path.
 
 on:
+  push:
+    tags: [ 'ffmpegkit-build-*' ]
   workflow_dispatch:
     inputs:
       ffmpegkit_ref:
