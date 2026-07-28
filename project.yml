@@ -1,6 +1,6 @@
 name: PrivateMediaStudio
 options:
-  bundleIdPrefix: com.privatemediastudio
+  bundleIdPrefix: __BUNDLE_ID__
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
@@ -27,13 +27,21 @@ targets:
         UILaunchScreen: {}
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.privatemediastudio.app
+        PRODUCT_BUNDLE_IDENTIFIER: __BUNDLE_ID__
         SWIFT_VERSION: "5.10"
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_BITCODE: false
         SWIFT_STRICT_CONCURRENCY: minimal
+      configs:
+        # Signing is Release-only so simulator/Debug builds (and fork PRs,
+        # which get no secrets) never need a certificate or profile.
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Apple Distribution"
+          DEVELOPMENT_TEAM: "__TEAM_ID__"
+          PROVISIONING_PROFILE_SPECIFIER: "__PROFILE_NAME__"
     scheme:
       testTargets: []
       gatherCoverageData: false
