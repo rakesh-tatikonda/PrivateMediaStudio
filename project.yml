@@ -6,9 +6,14 @@ options:
   createIntermediateGroups: true
 
 packages:
+  # Pinned to a tag, not a branch. The default branch here is `master` (not
+  # `main`, which is what broke resolution), but tracking any branch is a
+  # reproducibility hazard: XcodeGen regenerates the .xcodeproj on every CI
+  # run, so Package.resolved never survives and an unpinned dependency would
+  # silently drift between builds.
   SwiftWhisper:
     url: https://github.com/exPHAT/SwiftWhisper
-    branch: main
+    exactVersion: 1.2.0
 
 targets:
   PrivateMediaStudio:
