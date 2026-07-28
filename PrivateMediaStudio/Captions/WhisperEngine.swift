@@ -33,7 +33,7 @@ final class WhisperEngine {
             throw WhisperEngineError.modelNotBundled
         }
 
-        var params = WhisperParams.default
+        let params = WhisperParams.default
         params.translate = translateToEnglish
         if let lang = language.whisperParamValue { params.language = lang }
         params.print_progress = false
