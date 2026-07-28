@@ -44,7 +44,7 @@
 	</array>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>com.privatemediastudio.app.transcription-cleanup</string>
+		<string>__BUNDLE_ID__.transcription-cleanup</string>
 	</array>
 
 	<!-- ATS: self-hosted / LAN media servers commonly use plain HTTP or self-signed

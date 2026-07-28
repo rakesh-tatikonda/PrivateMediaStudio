@@ -8,7 +8,7 @@
 	<key>method</key>
 	<string>app-store-connect</string>
 	<key>teamID</key>
-	<string>REPLACE_WITH_YOUR_TEAM_ID</string>
+	<string>__TEAM_ID__</string>
 	<key>signingStyle</key>
 	<string>manual</string>
 	<key>uploadSymbols</key>

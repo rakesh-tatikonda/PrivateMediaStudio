@@ -52,6 +52,17 @@ if grep -q "__BUNDLE_ID__\|__TEAM_ID__\|__PROFILE_NAME__" "${FILES[@]}"; then
   exit 1
 fi
 
+# Guard against the more insidious failure: a file that was never updated to
+# use the placeholders at all. Substitution then finds nothing, reports
+# success, and the stale literal reaches xcodebuild — which fails much later
+# with "No profiles for team 'REPLACE_WITH_YOUR_TEAM_ID'" or similar.
+if grep -q "REPLACE_WITH_YOUR_TEAM_ID\|com\.privatemediastudio" "${FILES[@]}"; then
+  echo "error: a stale pre-placeholder value is still present. One of these" >&2
+  echo "       files was not updated to the placeholder scheme:" >&2
+  grep -ln "REPLACE_WITH_YOUR_TEAM_ID\|com\.privatemediastudio" "${FILES[@]}" >&2
+  exit 1
+fi
+
 # Never echoes the values themselves. GitHub masks registered secrets in log
 # output, but the profile name is not a registered secret and can contain the
 # team name, so it stays unprinted too.
