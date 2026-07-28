@@ -20,10 +20,10 @@ final class WhisperEngine {
     /// Loads (or reuses) the bundled ggml model. Kept lazy since Live Mic mode
     /// and one-shot file transcription both go through this, and we don't want
     /// to pay the load cost until the user actually starts a transcription.
-    private func ensureModelLoaded(modelName: String, translateToEnglish: Bool, language: WhisperLanguage) throws -> Whisper {
+    private func ensureModelLoaded(modelName: String, translateToEnglish: Bool, language: CaptionLanguage) throws -> Whisper {
         if let whisper, loadedModelName == modelName {
             whisper.params.translate = translateToEnglish
-            whisper.params.language = language.whisperParamValue
+            if let lang = language.whisperParamValue { whisper.params.language = lang }
             return whisper
         }
 
@@ -35,7 +35,7 @@ final class WhisperEngine {
 
         var params = WhisperParams.default
         params.translate = translateToEnglish
-        params.language = language.whisperParamValue
+        if let lang = language.whisperParamValue { params.language = lang }
         params.print_progress = false
         params.print_realtime = false
 
@@ -52,7 +52,7 @@ final class WhisperEngine {
         samples: [Float],
         modelName: String = "ggml-base.en.bin",
         translateToEnglish: Bool,
-        language: WhisperLanguage = .auto,
+        language: CaptionLanguage = .auto,
         progress: ((Float) -> Void)? = nil
     ) async throws -> [TranscriptSegment] {
         let whisper = try ensureModelLoaded(modelName: modelName, translateToEnglish: translateToEnglish, language: language)
@@ -92,12 +92,12 @@ private final class ProgressForwarder: WhisperDelegate {
     func whisper(_ whisper: Whisper, didUpdateProgress progress: Double) {
         onProgress(Float(progress))
     }
-    func whisper(_ whisper: Whisper, didProcessNewSegments segments: [WhisperSegment], atIndex index: Int) {}
-    func whisper(_ whisper: Whisper, didCompleteWithSegments segments: [WhisperSegment]) {}
+    func whisper(_ whisper: Whisper, didProcessNewSegments segments: [Segment], atIndex index: Int) {}
+    func whisper(_ whisper: Whisper, didCompleteWithSegments segments: [Segment]) {}
     func whisper(_ whisper: Whisper, didErrorWith error: Error) {}
 }
 
-enum WhisperLanguage: String, CaseIterable, Identifiable {
+enum CaptionLanguage: String, CaseIterable, Identifiable {
     case auto, english, spanish, french, german, japanese, mandarin, korean, portuguese, italian, russian, arabic, hindi
 
     var id: String { rawValue }
@@ -120,22 +120,31 @@ enum WhisperLanguage: String, CaseIterable, Identifiable {
         }
     }
 
-    /// whisper.cpp language codes.
-    var whisperParamValue: WhisperParams.Language {
+    /// whisper.cpp / ISO 639-1 codes. Kept as strings deliberately: this maps
+    /// onto SwiftWhisper's own `WhisperLanguage`, and going through
+    /// `init(rawValue:)` means we depend only on the documented language codes
+    /// rather than on that enum's Swift case spellings.
+    var isoCode: String {
         switch self {
-        case .auto: return .auto
-        case .english: return .english
-        case .spanish: return .spanish
-        case .french: return .french
-        case .german: return .german
-        case .japanese: return .japanese
-        case .mandarin: return .chinese
-        case .korean: return .korean
-        case .portuguese: return .portuguese
-        case .italian: return .italian
-        case .russian: return .russian
-        case .arabic: return .arabic
-        case .hindi: return .hindi
+        case .auto: return "auto"
+        case .english: return "en"
+        case .spanish: return "es"
+        case .french: return "fr"
+        case .german: return "de"
+        case .japanese: return "ja"
+        case .mandarin: return "zh"
+        case .korean: return "ko"
+        case .portuguese: return "pt"
+        case .italian: return "it"
+        case .russian: return "ru"
+        case .arabic: return "ar"
+        case .hindi: return "hi"
         }
+    }
+
+    /// nil when the code is not one SwiftWhisper recognises — callers then
+    /// leave `WhisperParams.default`'s language untouched.
+    var whisperParamValue: SwiftWhisper.WhisperLanguage? {
+        SwiftWhisper.WhisperLanguage(rawValue: isoCode)
     }
 }
