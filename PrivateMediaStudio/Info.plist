@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Microphone: live-mic transcription (Captions) + screen recording audio (Editor) -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Private Media Studio uses your microphone to transcribe speech on-device. Audio never leaves your device.</string>
+
+	<!-- Photos: import media for editing, export finished/recorded videos -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Private Media Studio needs access to your photo library to import videos for editing and to browse media.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Private Media Studio saves exported and recorded videos to your photo library.</string>
+
+	<!-- Speech (optional live-translate fallback UI hint; whisper.cpp does the actual work on-device) -->
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Not used for cloud recognition — Private Media Studio transcribes fully on-device with a local model.</string>
+
+	<!-- Local network: SMB/FTP server discovery + connection (Streams) -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Private Media Studio needs local network access to browse and stream media from SMB and FTP servers on your network.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_smb._tcp</string>
+		<string>_ftp._tcp</string>
+		<string>_afpovertcp._tcp</string>
+	</array>
+
+	<!-- File import (local video/audio, .srt subtitle attach) -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>UISupportsDocumentBrowser</key>
+	<true/>
+
+	<!-- Background modes: background transcription/translation, live-mic recording,
+	     continuous background audio/video playback -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>processing</string>
+		<string>fetch</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.privatemediastudio.app.transcription-cleanup</string>
+	</array>
+
+	<!-- ATS: self-hosted / LAN media servers commonly use plain HTTP or self-signed
+	     HTTPS. Scoped to media loading specifically (AVFoundation), since the
+	     app's only URLSession-based network call (Captions' Media URL fetch)
+	     targets public internet URLs, not LAN hosts — VLCKit/FFmpegKit's own
+	     SMB/FTP/HLS networking uses its own stack and isn't governed by ATS
+	     regardless of this key, so NSAllowsLocalNetworking (which would apply
+	     to *all* URLSession requests, not just media) isn't needed here and
+	     is deliberately left out to keep this as narrow as the feature set
+	     actually requires. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoadsForMedia</key>
+		<true/>
+	</dict>
+
+	<!-- Standard -->
+	<key>CFBundleDisplayName</key>
+	<string>Private Media Studio</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>UIRequiresFullScreen</key>
+	<false/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+</dict>
+</plist>

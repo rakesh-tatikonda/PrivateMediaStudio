@@ -1,0 +1,172 @@
+name: iOS CI (simulator build — no signing required)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  WHISPER_MODEL: ggml-base.en.bin
+  WHISPER_MODEL_URL: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
+  SIMULATOR_DEVICE: "iPhone 15"
+
+jobs:
+  build-and-run-simulator:
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: Pods
+          key: pods-${{ hashFiles('Podfile') }}
+
+      - name: Cache whisper model
+        uses: actions/cache@v4
+        id: model-cache
+        with:
+          path: PrivateMediaStudio/Resources/Models/${{ env.WHISPER_MODEL }}
+          key: whisper-model-${{ env.WHISPER_MODEL }}
+
+      - name: Download whisper model
+        if: steps.model-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p PrivateMediaStudio/Resources/Models
+          curl -L "$WHISPER_MODEL_URL" -o "PrivateMediaStudio/Resources/Models/$WHISPER_MODEL"
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Install CocoaPods deps
+        run: pod install --repo-update
+
+      - name: Build for simulator
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -workspace PrivateMediaStudio.xcworkspace \
+            -scheme PrivateMediaStudio \
+            -destination "platform=iOS Simulator,name=$SIMULATOR_DEVICE" \
+            | xcbeautify || true
+
+      - name: Boot simulator and install app
+        run: |
+          UDID=$(xcrun simctl list devices available | grep "$SIMULATOR_DEVICE" | head -1 | grep -oE '[0-9A-F-]{36}')
+          echo "SIM_UDID=$UDID" >> $GITHUB_ENV
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "PrivateMediaStudio.app" -path "*iphonesimulator*" | head -1)
+          echo "APP_PATH=$APP_PATH" >> $GITHUB_ENV
+          xcrun simctl install "$UDID" "$APP_PATH"
+
+      - name: Launch app and capture proof-of-life screenshot
+        run: |
+          xcrun simctl launch "$SIM_UDID" com.privatemediastudio.app
+          sleep 5
+          mkdir -p artifacts
+          xcrun simctl io "$SIM_UDID" screenshot artifacts/launch-screenshot.png
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-build
+          path: |
+            artifacts/
+            ~/Library/Developer/Xcode/DerivedData/**/Logs/Build/*.xcactivitylog
+
+  # ---------------------------------------------------------------------------
+  # Phase 4: signed, device-installable builds. Both jobs below are complete
+  # and ready to uncomment — see RELEASE.md for the full no-Mac walkthrough
+  # (generating a distribution cert and provisioning profile using only
+  # openssl + the Apple Developer / App Store Connect web portals).
+  #
+  # TESTFLIGHT (recommended): no device UDID registration needed at all —
+  # install via the TestFlight app on any device you sign into with your
+  # Apple ID. Needs 5 repo secrets:
+  #   BUILD_CERTIFICATE_P12_BASE64      – Apple Distribution cert, base64 .p12
+  #   BUILD_CERTIFICATE_PASSWORD        – password you set when exporting that .p12
+  #   PROVISIONING_PROFILE_BASE64       – base64-encoded App Store provisioning profile
+  #   APPSTORE_CONNECT_API_KEY_BASE64   – base64-encoded App Store Connect API .p8 key
+  #   APPSTORE_CONNECT_API_KEY_ID       – that key's Key ID
+  #   APPSTORE_CONNECT_API_ISSUER_ID    – your App Store Connect Issuer ID
+  # ---------------------------------------------------------------------------
+  # archive-testflight:
+  #   runs-on: macos-14
+  #   needs: build-and-run-simulator
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Select Xcode
+  #       run: sudo xcode-select -s /Applications/Xcode_15.4.app
+  #     - name: Install signing identity into a dedicated CI keychain
+  #       run: |
+  #         security create-keychain -p ci ci.keychain
+  #         security set-keychain-settings -lut 21600 ci.keychain
+  #         security unlock-keychain -p ci ci.keychain
+  #         security list-keychains -d user -s ci.keychain $(security list-keychains -d user | sed 's/"//g')
+  #         echo "$BUILD_CERTIFICATE_P12_BASE64" | base64 --decode > cert.p12
+  #         security import cert.p12 -k ci.keychain -P "$BUILD_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+  #         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ci ci.keychain
+  #     - name: Install provisioning profile
+  #       run: |
+  #         echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > profile.mobileprovision
+  #         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+  #         cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+  #     - name: Install App Store Connect API key
+  #       run: |
+  #         mkdir -p ~/.appstoreconnect/private_keys
+  #         echo "$APPSTORE_CONNECT_API_KEY_BASE64" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_CONNECT_API_KEY_ID}.p8
+  #     - run: brew install xcodegen && xcodegen generate && pod install --repo-update
+  #     - name: Download whisper model
+  #       run: |
+  #         mkdir -p PrivateMediaStudio/Resources/Models
+  #         curl -L "$WHISPER_MODEL_URL" -o "PrivateMediaStudio/Resources/Models/$WHISPER_MODEL"
+  #     - name: Archive
+  #       run: |
+  #         xcodebuild archive -workspace PrivateMediaStudio.xcworkspace -scheme PrivateMediaStudio \
+  #           -archivePath build/PrivateMediaStudio.xcarchive -destination "generic/platform=iOS"
+  #     - name: Export .ipa (App Store Connect method)
+  #       run: |
+  #         xcodebuild -exportArchive -archivePath build/PrivateMediaStudio.xcarchive \
+  #           -exportPath build/ipa -exportOptionsPlist ExportOptions.plist
+  #     - name: Upload to TestFlight
+  #       run: |
+  #         xcrun altool --upload-app -f build/ipa/PrivateMediaStudio.ipa -t ios \
+  #           --apiKey "$APPSTORE_CONNECT_API_KEY_ID" --apiIssuer "$APPSTORE_CONNECT_API_ISSUER_ID"
+  #
+  # AD-HOC ALTERNATIVE: produces a raw .ipa you sideload directly (AltStore,
+  # Sideloadly, etc.) instead of going through TestFlight — but ad-hoc profiles
+  # only work on devices whose UDIDs were registered in the profile, and
+  # getting a UDID without Xcode means a third-party tool (e.g. a site like
+  # udid.io) or borrowing a Mac/Xcode once. TestFlight above avoids this
+  # entirely, which is why it's the recommended path. Same first 4 secrets as
+  # above (skip the App Store Connect API key ones), and change
+  # ExportOptions.plist's `method` to `ad-hoc` for this job specifically —
+  # simplest as a second plist (e.g. ExportOptionsAdHoc.plist) if you want
+  # both jobs available at once.
+  #   archive-adhoc:
+  #     runs-on: macos-14
+  #     needs: build-and-run-simulator
+  #     steps:
+  #       - uses: actions/checkout@v4
+  #       - run: brew install xcodegen && xcodegen generate && pod install --repo-update
+  #       - name: Archive + export ipa
+  #         run: |
+  #           xcodebuild archive -workspace PrivateMediaStudio.xcworkspace -scheme PrivateMediaStudio \
+  #             -archivePath build/PrivateMediaStudio.xcarchive -destination "generic/platform=iOS"
+  #           xcodebuild -exportArchive -archivePath build/PrivateMediaStudio.xcarchive \
+  #             -exportPath build/ipa -exportOptionsPlist ExportOptionsAdHoc.plist
+  #       - uses: actions/upload-artifact@v4
+  #         with:
+  #           name: device-ipa
+  #           path: build/ipa/*.ipa
