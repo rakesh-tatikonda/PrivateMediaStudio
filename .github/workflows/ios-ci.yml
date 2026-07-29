@@ -325,6 +325,28 @@ jobs:
             CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             | xcbeautify
 
+      # The archived plist is the one Apple validates. XcodeGen's `info:` block
+      # used to overwrite our hand-written Info.plist with a stub, which cost
+      # two full archive-and-upload cycles to spot. Assert the keys are present
+      # here so a regression fails in seconds rather than at upload.
+      - name: Verify archived Info.plist
+        run: |
+          PLIST="build/PrivateMediaStudio.xcarchive/Products/Applications/PrivateMediaStudio.app/Info.plist"
+          for key in UISupportedInterfaceOrientations \
+                     "UISupportedInterfaceOrientations~ipad" \
+                     NSMicrophoneUsageDescription \
+                     NSPhotoLibraryUsageDescription \
+                     NSLocalNetworkUsageDescription \
+                     UIBackgroundModes \
+                     CFBundleIconName; do
+            if ! /usr/libexec/PlistBuddy -c "Print :$key" "$PLIST" >/dev/null 2>&1; then
+              echo "::error::Missing '$key' in the archived Info.plist." >&2
+              echo "The plist was likely regenerated instead of used as-is." >&2
+              exit 1
+            fi
+          done
+          echo "Archived Info.plist contains all required keys."
+
       - name: Export .ipa
         run: |
           xcodebuild -exportArchive \
