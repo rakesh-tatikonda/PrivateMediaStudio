@@ -27,12 +27,16 @@ targets:
       - path: PrivateMediaStudio/Assets.xcassets
     dependencies:
       - package: SwiftWhisper
-    info:
-      path: PrivateMediaStudio/Info.plist
-      properties:
-        UILaunchScreen: {}
+    # NOTE: deliberately no `info:` block. XcodeGen's `info:` GENERATES an
+    # Info.plist at the given path, overwriting whatever is there — it does not
+    # merely reference it. With `info.path` pointing at our hand-maintained
+    # plist, every run silently replaced 80 lines of usage descriptions,
+    # background modes and orientations with a stub. Setting INFOPLIST_FILE
+    # instead makes Xcode consume the file as-is.
     settings:
       base:
+        INFOPLIST_FILE: PrivateMediaStudio/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
         PRODUCT_BUNDLE_IDENTIFIER: __BUNDLE_ID__
         SWIFT_VERSION: "5.10"
         MARKETING_VERSION: "0.1.0"
