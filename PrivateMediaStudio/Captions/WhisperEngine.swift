@@ -1,9 +1,21 @@
 import Foundation
 import SwiftWhisper
 
-enum WhisperEngineError: Error {
-    case modelNotBundled
+enum WhisperEngineError: LocalizedError {
+    case modelNotBundled(String)
     case transcriptionFailed(String)
+
+    // Without LocalizedError, Swift bridges these to NSError and surfaces only
+    // "(WhisperEngineError error 1.)" — the associated value, which is the
+    // only part that identifies what actually went wrong, is discarded.
+    var errorDescription: String? {
+        switch self {
+        case .modelNotBundled(let name):
+            return "The speech model \(name) is missing from the app bundle."
+        case .transcriptionFailed(let reason):
+            return "Transcription failed: \(reason)"
+        }
+    }
 }
 
 /// Owns the whisper.cpp model instance and turns raw PCM samples into
@@ -30,7 +42,7 @@ final class WhisperEngine {
         guard let modelURL = Bundle.main.url(forResource: modelName, withExtension: nil, subdirectory: "Models")
             ?? Bundle.main.url(forResource: (modelName as NSString).deletingPathExtension,
                                 withExtension: (modelName as NSString).pathExtension) else {
-            throw WhisperEngineError.modelNotBundled
+            throw WhisperEngineError.modelNotBundled(modelName)
         }
 
         let params = WhisperParams.default
@@ -70,6 +82,9 @@ final class WhisperEngine {
                     text: $0.text.trimmingCharacters(in: .whitespaces)
                 )
             }
+        } catch let error as WhisperError {
+            // SwiftWhisper's own error type, which is the informative one.
+            throw WhisperEngineError.transcriptionFailed(String(describing: error))
         } catch {
             throw WhisperEngineError.transcriptionFailed(error.localizedDescription)
         }
