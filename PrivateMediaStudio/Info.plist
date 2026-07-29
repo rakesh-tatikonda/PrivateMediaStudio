@@ -62,7 +62,27 @@
 		<true/>
 	</dict>
 
-	<!-- Standard -->
+	<!-- Standard. These were previously injected by XcodeGen's generated
+	     plist; now that the file is used verbatim they must be declared here.
+	     The $(...) values resolve from build settings in project.yml. -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>UILaunchScreen</key>
+	<dict/>
 	<key>CFBundleDisplayName</key>
 	<string>Private Media Studio</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

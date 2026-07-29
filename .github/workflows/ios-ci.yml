@@ -41,6 +41,27 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: bash scripts/configure.sh
 
+      # Now that Xcode consumes Info.plist verbatim (no XcodeGen `info:` block),
+      # the standard CFBundle* keys must be present in the file itself —
+      # XcodeGen used to inject them. A missing CFBundleIdentifier does not
+      # fail the build; it fails much later at `simctl install` with "Missing
+      # bundle ID", or at App Store validation. Check up front.
+      - name: Verify source Info.plist
+        run: |
+          PLIST=PrivateMediaStudio/Info.plist
+          for key in CFBundleIdentifier CFBundleExecutable CFBundleName \
+                     CFBundleShortVersionString CFBundleVersion \
+                     CFBundlePackageType UILaunchScreen \
+                     UISupportedInterfaceOrientations \
+                     "UISupportedInterfaceOrientations~ipad" \
+                     NSMicrophoneUsageDescription UIBackgroundModes; do
+            if ! /usr/libexec/PlistBuddy -c "Print :$key" "$PLIST" >/dev/null 2>&1; then
+              echo "::error::$PLIST is missing '$key'." >&2
+              exit 1
+            fi
+          done
+          echo "Source Info.plist looks complete."
+
       - name: Cache CocoaPods
         uses: actions/cache@v4
         with:
@@ -261,6 +282,27 @@ jobs:
         run: |
           /usr/libexec/PlistBuddy -c "Add :provisioningProfiles dict" ExportOptions.plist || true
           /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:${APP_BUNDLE_ID} string ${PROVISIONING_PROFILE_NAME}" ExportOptions.plist
+
+      # Now that Xcode consumes Info.plist verbatim (no XcodeGen `info:` block),
+      # the standard CFBundle* keys must be present in the file itself —
+      # XcodeGen used to inject them. A missing CFBundleIdentifier does not
+      # fail the build; it fails much later at `simctl install` with "Missing
+      # bundle ID", or at App Store validation. Check up front.
+      - name: Verify source Info.plist
+        run: |
+          PLIST=PrivateMediaStudio/Info.plist
+          for key in CFBundleIdentifier CFBundleExecutable CFBundleName \
+                     CFBundleShortVersionString CFBundleVersion \
+                     CFBundlePackageType UILaunchScreen \
+                     UISupportedInterfaceOrientations \
+                     "UISupportedInterfaceOrientations~ipad" \
+                     NSMicrophoneUsageDescription UIBackgroundModes; do
+            if ! /usr/libexec/PlistBuddy -c "Print :$key" "$PLIST" >/dev/null 2>&1; then
+              echo "::error::$PLIST is missing '$key'." >&2
+              exit 1
+            fi
+          done
+          echo "Source Info.plist looks complete."
 
       # Populates Vendor/ffmpeg-kit from our own release asset. Upstream
       # ffmpeg-kit binaries were removed from CocoaPods in April 2025, so
