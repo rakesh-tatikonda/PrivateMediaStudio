@@ -12,8 +12,11 @@ on:
         default: false
 
 env:
-  WHISPER_MODEL: ggml-base.en.bin
-  WHISPER_MODEL_URL: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
+  # Multilingual, NOT ggml-base.en.bin. The ".en" variants are trained on
+  # English only and cannot transcribe other languages or translate — the
+  # language picker silently produced English-shaped gibberish with them.
+  WHISPER_MODEL: ggml-base.bin
+  WHISPER_MODEL_URL: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin
   SIMULATOR_DEVICE: "iPhone 16"
 
 jobs:
