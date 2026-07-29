@@ -4,6 +4,7 @@ import SwiftWhisper
 enum WhisperEngineError: LocalizedError {
     case modelNotBundled(String)
     case transcriptionFailed(String)
+    case englishOnlyModel(model: String, requested: String)
 
     // Without LocalizedError, Swift bridges these to NSError and surfaces only
     // "(WhisperEngineError error 1.)" — the associated value, which is the
@@ -14,6 +15,8 @@ enum WhisperEngineError: LocalizedError {
             return "The speech model \(name) is missing from the app bundle."
         case .transcriptionFailed(let reason):
             return "Transcription failed: \(reason)"
+        case .englishOnlyModel(let model, let requested):
+            return "\(model) is an English-only model and cannot transcribe \(requested). Bundle the multilingual model (ggml-base.bin) instead."
         }
     }
 }
@@ -33,6 +36,14 @@ final class WhisperEngine {
     /// and one-shot file transcription both go through this, and we don't want
     /// to pay the load cost until the user actually starts a transcription.
     private func ensureModelLoaded(modelName: String, translateToEnglish: Bool, language: CaptionLanguage) throws -> Whisper {
+        // Whisper's ".en" checkpoints are English-only. Asking one for another
+        // language does not error inside whisper.cpp — it returns confident
+        // nonsense — so catch the combination here rather than shipping
+        // silently wrong transcripts.
+        if modelName.contains(".en."), language != .english, language != .auto {
+            throw WhisperEngineError.englishOnlyModel(model: modelName,
+                                                      requested: language.displayName)
+        }
         if let whisper, loadedModelName == modelName {
             whisper.params.translate = translateToEnglish
             if let lang = language.whisperParamValue { whisper.params.language = lang }
@@ -62,7 +73,7 @@ final class WhisperEngine {
     /// start/end timecodes for SRT export.
     func transcribe(
         samples: [Float],
-        modelName: String = "ggml-base.en.bin",
+        modelName: String = "ggml-base.bin",
         translateToEnglish: Bool,
         language: CaptionLanguage = .auto,
         progress: ((Float) -> Void)? = nil
