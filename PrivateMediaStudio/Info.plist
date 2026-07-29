@@ -6,6 +6,15 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Private Media Studio uses your microphone to transcribe speech on-device. Audio never leaves your device.</string>
 
+	<!-- Camera: the app never captures camera video — ScreenRecorder leaves
+	     RPScreenRecorder.isCameraEnabled off. The string is required anyway
+	     because ReplayKit and FFmpegKit's libavdevice (which bundles an
+	     AVFoundation capture input) reference camera APIs, and Apple scans for
+	     API references rather than actual use. Rebuilding FFmpegKit without
+	     libavdevice would remove one of the two sources, but not ReplayKit. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Private Media Studio does not record video from your camera. This permission appears because the screen-recording and media frameworks the app uses reference camera APIs.</string>
+
 	<!-- Photos: import media for editing, export finished/recorded videos -->
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Private Media Studio needs access to your photo library to import videos for editing and to browse media.</string>

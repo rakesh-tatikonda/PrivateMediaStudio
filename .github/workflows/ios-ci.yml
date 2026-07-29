@@ -54,7 +54,8 @@ jobs:
                      CFBundlePackageType UILaunchScreen \
                      UISupportedInterfaceOrientations \
                      "UISupportedInterfaceOrientations~ipad" \
-                     NSMicrophoneUsageDescription UIBackgroundModes; do
+                     NSMicrophoneUsageDescription NSCameraUsageDescription \
+                     UIBackgroundModes; do
             if ! /usr/libexec/PlistBuddy -c "Print :$key" "$PLIST" >/dev/null 2>&1; then
               echo "::error::$PLIST is missing '$key'." >&2
               exit 1
@@ -296,7 +297,8 @@ jobs:
                      CFBundlePackageType UILaunchScreen \
                      UISupportedInterfaceOrientations \
                      "UISupportedInterfaceOrientations~ipad" \
-                     NSMicrophoneUsageDescription UIBackgroundModes; do
+                     NSMicrophoneUsageDescription NSCameraUsageDescription \
+                     UIBackgroundModes; do
             if ! /usr/libexec/PlistBuddy -c "Print :$key" "$PLIST" >/dev/null 2>&1; then
               echo "::error::$PLIST is missing '$key'." >&2
               exit 1
@@ -397,6 +399,7 @@ jobs:
           for key in UISupportedInterfaceOrientations \
                      "UISupportedInterfaceOrientations~ipad" \
                      NSMicrophoneUsageDescription \
+                     NSCameraUsageDescription \
                      NSPhotoLibraryUsageDescription \
                      NSLocalNetworkUsageDescription \
                      UIBackgroundModes \
