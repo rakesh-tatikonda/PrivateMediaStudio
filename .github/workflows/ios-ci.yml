@@ -310,6 +310,26 @@ jobs:
             exit 1
           fi
 
+      # Pinpoints where an Info.plist regression comes from: a stale
+      # project.yml still carrying `info:`, a source plist missing the key, or
+      # INFOPLIST_FILE not resolving. Cheap, and saves a full archive cycle.
+      - name: Diagnose Info.plist wiring
+        run: |
+          echo "--- project.yml ---"
+          grep -n "info:\|INFOPLIST_FILE\|GENERATE_INFOPLIST_FILE" project.yml \
+            || echo "!! neither info: nor INFOPLIST_FILE found"
+          echo "--- source plist ---"
+          if /usr/libexec/PlistBuddy -c "Print :UISupportedInterfaceOrientations" \
+               PrivateMediaStudio/Info.plist >/dev/null 2>&1; then
+            echo "orientations present in source plist"
+          else
+            echo "!! orientations MISSING from source plist (it was overwritten)"
+          fi
+          echo "--- effective build settings ---"
+          xcodebuild -workspace PrivateMediaStudio.xcworkspace \
+            -scheme PrivateMediaStudio -configuration Release \
+            -showBuildSettings 2>/dev/null | grep -i INFOPLIST || true
+
       # CURRENT_PROJECT_VERSION is pinned to "1" in project.yml; App Store
       # Connect rejects a build whose (version, build) pair it has already
       # seen, so the run number supplies a monotonic build number.
