@@ -314,12 +314,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash scripts/fetch-ffmpegkit.sh
 
-      - name: Install toolchain and dependencies
-        run: |
-          brew install xcodegen
-          xcodegen generate
-          pod install --repo-update
-
+      # MUST run before `xcodegen generate`. XcodeGen enumerates files on disk
+      # at generation time, so if the model is not present yet it never gets
+      # added to the target and silently never reaches the bundle — the app
+      # then fails at runtime with "model is missing from the app bundle".
+      # The simulator job already had this order; the archive job did not,
+      # which is why only TestFlight builds shipped without the model.
       - name: Cache whisper model
         uses: actions/cache@v4
         id: model-cache
@@ -357,6 +357,12 @@ jobs:
       # Pinpoints where an Info.plist regression comes from: a stale
       # project.yml still carrying `info:`, a source plist missing the key, or
       # INFOPLIST_FILE not resolving. Cheap, and saves a full archive cycle.
+      - name: Install toolchain and dependencies
+        run: |
+          brew install xcodegen
+          xcodegen generate
+          pod install --repo-update
+
       - name: Diagnose Info.plist wiring
         run: |
           echo "--- project.yml ---"
@@ -393,6 +399,20 @@ jobs:
       # used to overwrite our hand-written Info.plist with a stub, which cost
       # two full archive-and-upload cycles to spot. Assert the keys are present
       # here so a regression fails in seconds rather than at upload.
+      # Ordering guard: the model must be inside the built .app, not merely on
+      # disk. Catches a regression in step order before it reaches TestFlight
+      # and fails at runtime instead.
+      - name: Verify model is in the archived app
+        run: |
+          APP="build/PrivateMediaStudio.xcarchive/Products/Applications/PrivateMediaStudio.app"
+          FOUND=$(find "$APP" -name "$WHISPER_MODEL" | head -1)
+          if [ -z "$FOUND" ]; then
+            echo "::error::$WHISPER_MODEL is not in the built app bundle." >&2
+            echo "The model must be downloaded BEFORE xcodegen generate runs." >&2
+            exit 1
+          fi
+          echo "Model bundled at: ${FOUND#$APP/}"
+
       - name: Verify archived Info.plist
         run: |
           PLIST="build/PrivateMediaStudio.xcarchive/Products/Applications/PrivateMediaStudio.app/Info.plist"
